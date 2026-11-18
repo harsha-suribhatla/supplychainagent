@@ -1,0 +1,22 @@
+Design Document - Inventory Replenishment System
+
+Overview:
+The Inventory Replenishment Agent decides when to order more of each SKU. It aims to avoid stockouts without causing excess inventory, since both lost sales and excess inventory cost money.
+
+It uses sales.csv for daily sales, inventory.csv for starting inventory, and params.csv for lead time, minimum order quantity, service level, holding costs, and stockout costs. Every day, it either places an order or waits, then it explains its action in the log.
+
+How the agent decides:
+We used an EWMA forecast to estimate future demand. It gives more weight to recent sales and updates every day, so it can adjust when demand changes.
+The agent calculates safety stock, or extra inventory for higher-than-expected demand or late orders. It uses forecast error and the target service level. A higher service level means more safety stock.
+
+Each day, it checks inventory on hand and inventory already on order. It also checks the forecast and lead times. If inventory position is below the reorder point, it orders up to a target amount. Otherwise, it waits. Orders arrive after the configured lead time.
+
+Rules and trust:
+It follows the minimum order quantity, so it does not place tiny orders.
+It includes inventory already on the way, which helps stop duplicate orders.
+It uses each SKU's own lead time and service level.
+It orders only enough to return to its target amount, which helps avoid over-ordering.
+It considers holding cost and stockout cost. Waiting can save money, but waiting too long can cause lost sales.
+The simulation runs one day at a time. It gets the orders that have arrived, fills out the customer demand, tracks anything it could not fill, figures out the costs, and saves what the agent decided to do. The log shows the forecast and any decisions the agent made and why. 
+
+Stockouts, fill rate, and total costs were used to see how well the agent did. The log matters because you can see why the agent did something instead of it just making choices with no explanation. That makes it easier to spot when it made a bad decision. Keeping enough inventory also affects customer trust because people might stop coming back if stuff is always out of stock. But it still cannot just order a ton of everything, because that would cost too much.
