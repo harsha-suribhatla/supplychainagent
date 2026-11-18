@@ -1,0 +1,10 @@
+Scaling Note
+How it scales
+Right now the agent loops through every SKU one at a time, which is fine for 3 SKUs but slows down fast as the catalog grows. We rewrote the core logic to handle all SKUs at once with numpy arrays, and it gives the exact same costs as the original. At 1,000 SKUs the loop took about 0.34 seconds while the vectorized version took 0.0075 seconds, so it’s roughly 45x faster. A 50,000 SKU store would run in well under a second. We’d also split SKUs into A, B, and C groups by value. In our test, the A group was about 39% of SKUs but 80% of the value, so those get daily reviews and a 98% service level, while the C group (5% of the value) only gets checked weekly.
+How to run it in the cloud
+We’d run the agent on AWS Lambda and have EventBridge trigger it every night once the day’s sales come in. Sales, inventory, and params would move from local CSVs to S3, and later we’d pull them straight from the store’s inventory system. If the catalog gets really big, we can split SKUs into batches and run them in parallel.
+Monitoring and logging
+The agent already writes a reason for every order it places or skips, so we’d send that daily log to CloudWatch along with fill rate, stockouts, and total cost. We’d get an alert if the job fails, if fill rate drops below target, or if one SKU suddenly orders way more than normal. If a data pull fails, it retries up to 3 times, and if sales data is still missing it skips ordering that day instead of guessing.
+Cost controls
+Running the agent itself costs almost nothing, so the real risk is overbuying stock. We’d set a daily cap on total order value and have someone approve any purchase order over a set dollar amount before it goes to a supplier. Since only A items would use an LLM to explain decisions, that keeps API costs low, and AWS Budgets would warn us if cloud costs start climbing.
+
